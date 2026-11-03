@@ -1,0 +1,31 @@
+name: SOC Detection Lab Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Offline detection tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Configure Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Check Python syntax
+        run: python -m compileall -q detector.py main.py
+      - name: Run regression tests
+        run: python -m unittest discover -s tests -v
+      - name: Validate documented sample
+        run: |
+          python main.py --input data/auth_events.jsonl --output findings.json
+          python -c "import json; d=json.load(open('findings.json')); assert d['input_events']==13 and d['alert_count']==3; assert {x['rule'] for x in d['alerts']} == {'repeated_login_failures','success_after_failures','possible_password_spray'}; print('Sample findings verified')"
